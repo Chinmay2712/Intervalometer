@@ -32,7 +32,9 @@ jobs:
         run: flutter pub get
 
       - name: Run tests
-        run: flutter test
+        run: |
+          set -o pipefail
+          flutter test 2>&1 | tee test.log
 
       # A free Apple ID can't sign "Sign in with Apple". Login is hidden in the
       # app for now, so drop it from this build only.
@@ -40,7 +42,21 @@ jobs:
         run: /usr/libexec/PlistBuddy -c "Delete :com.apple.developer.applesignin" ios/Runner/Runner.entitlements || true
 
       - name: Build iOS app (unsigned)
-        run: flutter build ios --release --no-codesign --dart-define-from-file=env.json
+        run: |
+          set -o pipefail
+          flutter build ios --release --no-codesign --dart-define-from-file=env.json 2>&1 | tee build.log
+
+      # Shows the error lines on the run's summary page (readable without
+      # opening the full log).
+      - name: Summarise errors
+        if: failure()
+        run: |
+          for f in test.log build.log; do
+            [ -f "$f" ] || continue
+            grep -E "error:|Error:|EXCEPTION|Expected:|Actual:|FAILED|Failed to|\[E\]" "$f" | head -40 | while IFS= read -r line; do
+              echo "::error title=$f::${line:0:400}"
+            done
+          done
 
       - name: Package .ipa
         run: |
