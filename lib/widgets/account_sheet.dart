@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../ui/tokens.dart';
+
 import '../auth/auth_service.dart';
 import '../screens/login_screen.dart';
 
@@ -7,7 +9,6 @@ Future<void> showAccountSheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
-    backgroundColor: const Color(0xFF12151C),
     builder: (_) => const _AccountSheet(),
   );
 }
@@ -34,7 +35,7 @@ class _AccountSheetState extends State<_AccountSheet> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            style: FilledButton.styleFrom(backgroundColor: V.signal, foregroundColor: V.onIon),
             onPressed: () => Navigator.pop(c, true),
             child: const Text('Delete'),
           ),
@@ -126,7 +127,7 @@ class _AccountSheetState extends State<_AccountSheet> {
                 const SizedBox(height: 4),
                 TextButton(
                   onPressed: _busy ? null : _deleteAccount,
-                  style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+                  style: TextButton.styleFrom(foregroundColor: V.signal),
                   child: _busy
                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Text('Delete account'),

@@ -14,6 +14,27 @@ native camera code for full control:
 | Photo format (JPEG, HEIC, PNG, TIFF, RAW, optionally + RAW) | ✅ JPEG/HEIC by the camera; PNG/TIFF lossless from the uncompressed photo | ✅ JPEG by the camera; HEIC/PNG/TIFF converted from a quality-100 JPEG |
 | Photos saved to | Photos app + app's Documents/Valometer | Pictures/Valometer + app folder |
 
+## Design
+
+An "observatory instrument" look, built around the
+[Laws of UX](https://lawsofux.com/): dim blue-black surfaces that keep your
+eyes dark-adapted, hairline outlines, one cool accent (`lib/ui/tokens.dart`)
+and a condensed readout face (Roboto Condensed, bundled for offline use) for
+numbers.
+
+- **Fitts's law:** 44–48 pt touch targets, a large shutter in the thumb zone,
+  and ruler dials (`lib/ui/scale_dial.dart`) you can drag anywhere along or
+  tap on either side to step by one.
+- **Common region / proximity:** the pro settings share one bounded strip.
+- **Von Restorff:** only the shutter and the main action are filled.
+- **Doherty threshold:** values apply while you drag, with a haptic tick per
+  stop.
+- **Goal gradient:** an interval sequence shows a progress bar shot by shot.
+- **Accessibility:** text contrast at least 4.5:1, screen-reader labels on
+  the shutter, settings and dials, layouts tested at 130 % text size, reduced
+  motion respected. Every state reads by brightness, shape or text too, so it
+  survives the red night-vision filter.
+
 ## Studio (camera screen, top bar icon)
 
 Layout: a night-sky backdrop with the three tools in a floating switcher at
@@ -136,15 +157,27 @@ Studio, pick the **Valometer** run configuration (it passes
 `--dart-define-from-file=env.json`). From a terminal:
 `flutter run --dart-define-from-file=env.json`.
 
-## Running on your iPhone
+## Running on your iPhone (GitHub Actions, no Mac needed)
 
-iOS apps can only be built on a **Mac with Xcode** (Apple's rule; Windows
-can't do it). Options:
+Every push to `main` runs **iOS build** (`.github/workflows/ios.yml`) on a
+GitHub-hosted Mac (free and unlimited for public repos). It runs the tests and
+builds an unsigned `Valometer.ipa`.
 
-- Borrow or use a Mac: `open ios/Runner.xcworkspace`, set your Apple ID team in
-  *Signing & Capabilities*, then `flutter run` with the iPhone connected.
-- A cloud Mac CI (Codemagic, GitHub Actions macOS runners) to build and
-  upload to TestFlight.
+1. Open the repo's **Actions** tab, pick the latest *iOS build* run, and
+   download **Valometer-ios** under *Artifacts*. Unzip it to get the `.ipa`.
+2. On Windows, install [Sideloadly](https://sideloadly.io/) (and iTunes /
+   iCloud from Apple's website, which it needs). Plug in the iPhone, drag the
+   `.ipa` in, sign in with your Apple ID and press *Start*.
+3. On the iPhone: *Settings › Privacy & Security › Developer Mode* → on
+   (restarts), then *Settings › General › VPN & Device Management* → trust
+   your Apple ID.
+
+With a free Apple ID the app stops opening after **7 days**; sideload it
+again (your photos stay). A paid developer account (99 USD/year) lasts a
+year. The CI build leaves out "Sign in with Apple" (free accounts can't sign
+it); login is hidden in the app for now anyway. To give the build real
+Supabase/Google values, add a repository secret `ENV_JSON` with the contents
+of `env.json`.
 
 Minimum iOS: 17. Minimum Android: 10 (API 29).
 

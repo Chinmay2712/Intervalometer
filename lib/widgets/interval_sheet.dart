@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../ui/tokens.dart';
+
 import '../intervalometer.dart';
 import '../utils/exposure.dart';
 
@@ -14,7 +16,6 @@ Future<IntervalSettings?> showIntervalSheet(
     showDragHandle: true,
     // Grows to fit its content (the default caps it at about half the screen).
     isScrollControlled: true,
-    backgroundColor: const Color(0xFF12151C),
     builder: (_) => _IntervalSheet(initial: initial, shutterSeconds: shutterSeconds),
   );
 }
@@ -90,7 +91,7 @@ class _IntervalSheetState extends State<_IntervalSheet> {
                 child: Text(
                   'Interval is shorter than the exposure (${formatShutter(widget.shutterSeconds)}) '
                   '+ save time, so shots will run back-to-back.',
-                  style: text.bodySmall?.copyWith(color: Colors.orangeAccent),
+                  style: text.bodySmall?.copyWith(color: V.amber),
                 ),
               ),
             const SizedBox(height: 20),
@@ -139,7 +140,7 @@ class _PickerRow extends StatelessWidget {
               children: [
                 Text(label, style: Theme.of(context).textTheme.bodyLarge),
                 const SizedBox(height: 2),
-                Text(hint, style: const TextStyle(fontSize: 11, color: Colors.white54)),
+                Text(hint, style: const TextStyle(fontSize: 12, height: 1.3, color: V.textDim)),
               ],
             ),
           ),
@@ -150,7 +151,7 @@ class _PickerRow extends StatelessWidget {
             child: Text(
               valueText,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
+              style: V.readout(20),
             ),
           ),
           IconButton.filledTonal(onPressed: onPlus, icon: const Icon(Icons.add)),

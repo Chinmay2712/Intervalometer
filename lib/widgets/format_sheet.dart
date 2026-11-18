@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:valometer_camera/valometer_camera.dart';
 
+import '../ui/tokens.dart';
+
 /// The user's choice of output: one main format, optionally plus a DNG.
 class FormatChoice {
   const FormatChoice(this.format, {this.alsoRaw = false});
@@ -109,7 +111,7 @@ class _FormatSheetState extends State<_FormatSheet> {
                 padding: EdgeInsets.only(bottom: 8),
                 child: Text(
                   'Converting takes a second or two after each shot. In Interval mode, leave a little gap between shots.',
-                  style: TextStyle(fontSize: 12, color: Colors.white60),
+                  style: TextStyle(fontSize: 12, color: V.textDim),
                 ),
               ),
             const SizedBox(height: 8),

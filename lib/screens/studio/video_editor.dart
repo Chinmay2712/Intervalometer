@@ -10,6 +10,7 @@ import '../../studio/edit/video_edit.dart';
 import 'photo_editor.dart' show LightPanel, ColorPanel, CurvePanel;
 import 'studio_widgets.dart';
 import '../../studio/image_disposal.dart';
+import '../../ui/tokens.dart';
 
 /// Plays a list of frames (for previews and the video editor).
 class FramePlayback extends ChangeNotifier {
@@ -310,7 +311,7 @@ class _TrimPanel extends StatelessWidget {
           ),
         ]),
         const SizedBox(height: 6),
-        Text('Video length: ${_secs(e.durationSeconds())}', style: const TextStyle(fontSize: 12, color: Colors.white54)),
+        Text('Video length: ${_secs(e.durationSeconds())}', style: const TextStyle(fontSize: 12, color: V.textDim)),
       ],
     );
   }
@@ -326,14 +327,14 @@ class _SpeedPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('Frame rate', style: TextStyle(fontSize: 12, color: Colors.white70)),
+        const Text('Frame rate', style: TextStyle(fontSize: 12, color: V.textDim)),
         const SizedBox(height: 6),
         Wrap(spacing: 6, runSpacing: 6, children: [
           for (final f in const [12, 15, 24, 30, 48, 60])
             OptionChip(label: '$f fps', selected: e.fps == f, onTap: () => c.update(e.copyWith(fps: f))),
         ]),
         const SizedBox(height: 14),
-        const Text('Loop', style: TextStyle(fontSize: 12, color: Colors.white70)),
+        const Text('Loop', style: TextStyle(fontSize: 12, color: V.textDim)),
         const SizedBox(height: 6),
         Wrap(spacing: 6, children: [
           OptionChip(label: 'Off', selected: e.loop == LoopMode.off, onTap: () => c.update(e.copyWith(loop: LoopMode.off))),
@@ -342,9 +343,9 @@ class _SpeedPanel extends StatelessWidget {
         ]),
         const SizedBox(height: 8),
         const Text('Ping-pong plays forward then backward, so the video loops smoothly.',
-            style: TextStyle(fontSize: 11, color: Colors.white38)),
+            style: TextStyle(fontSize: 11, color: V.textFaint)),
         const SizedBox(height: 8),
-        Text('Video length: ${_secs(e.durationSeconds())}', style: const TextStyle(fontSize: 12, color: Colors.white54)),
+        Text('Video length: ${_secs(e.durationSeconds())}', style: const TextStyle(fontSize: 12, color: V.textDim)),
       ],
     );
   }
@@ -369,7 +370,7 @@ class _VideoLooksPanel extends StatelessWidget {
         ]),
         const SizedBox(height: 8),
         const Text('Video looks use light, colour and curve only (no astro tools).',
-            style: TextStyle(fontSize: 11, color: Colors.white38)),
+            style: TextStyle(fontSize: 11, color: V.textFaint)),
       ],
     );
   }
@@ -385,7 +386,7 @@ class _DeflickerPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text('Smooths sudden brightness jumps between frames while keeping slow changes like dusk.',
-            style: TextStyle(fontSize: 12, color: Colors.white54)),
+            style: TextStyle(fontSize: 12, color: V.textDim)),
         EditSlider(
           label: 'Strength',
           value: c.edit.deflicker,
@@ -396,7 +397,7 @@ class _DeflickerPanel extends StatelessWidget {
           const SizedBox(height: 6),
           LinearProgressIndicator(value: c.analyzing, minHeight: 3),
           const SizedBox(height: 4),
-          const Text('Measuring brightness of each frame…', style: TextStyle(fontSize: 11, color: Colors.white54)),
+          const Text('Measuring brightness of each frame…', style: TextStyle(fontSize: 11, color: V.textDim)),
         ] else if (c.means != null && c.edit.deflicker > 0)
           SizedBox(height: 60, child: CustomPaint(painter: _FlickerPainter(c.means!, deflickerGains(c.means!, c.edit.deflicker)))),
       ],
@@ -485,7 +486,7 @@ class VideoEditorCanvas extends StatelessWidget {
                 ),
                 Text(
                   '${_secs(c.playback.position / c.edit.fps)} / ${_secs(c.edit.durationSeconds())}',
-                  style: const TextStyle(fontSize: 11, color: Colors.white60, fontFeatures: [ui.FontFeature.tabularFigures()]),
+                  style: const TextStyle(fontSize: 11, color: V.textDim, fontFeatures: [ui.FontFeature.tabularFigures()]),
                 ),
               ]),
             ),

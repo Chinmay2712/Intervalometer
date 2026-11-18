@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../utils/histogram.dart';
 import '../widgets/histogram_view.dart';
+import '../ui/tokens.dart';
 
 /// Full-screen view of the last photo. Pinch-zoom up to 12× to check that
 /// stars are sharp dots (focus) and not short lines (trailing).
@@ -28,7 +29,7 @@ class ReviewScreen extends StatelessWidget {
           if (savedAs.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(right: 16),
-              child: Center(child: Text(savedAs.join(' + '), style: const TextStyle(color: Colors.white60))),
+              child: Center(child: Text(savedAs.join(' + '), style: const TextStyle(color: V.textDim))),
             ),
         ],
       ),
@@ -52,7 +53,7 @@ class ReviewScreen extends StatelessWidget {
                   Text(
                     'Clipped: ${(h.clippedShadows * 100).toStringAsFixed(1)}% black · '
                     '${(h.clippedHighlights * 100).toStringAsFixed(1)}% white',
-                    style: const TextStyle(fontSize: 12, color: Colors.white60),
+                    style: const TextStyle(fontSize: 12, color: V.textDim),
                   ),
                 ],
               ),
@@ -60,7 +61,7 @@ class ReviewScreen extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.only(bottom: 16),
             child: Text('Pinch to zoom. Stars should be round dots.',
-                style: TextStyle(fontSize: 12, color: Colors.white38)),
+                style: TextStyle(fontSize: 12, color: V.textFaint)),
           ),
         ],
       ),

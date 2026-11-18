@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:valometer/screens/camera_screen.dart';
 import 'package:valometer/theme.dart';
+import 'package:valometer/ui/scale_dial.dart';
 
 const _caps = {
   'textureId': 1,
@@ -36,6 +37,10 @@ void main() {
       const MethodChannel('valometer/camera'),
       (call) async => call.method == 'open' ? _caps : null,
     );
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMessageHandler(
+      'dev.flutter.pigeon.wakelock_plus_platform_interface.WakelockPlusApi.toggle',
+      (_) async => const StandardMessageCodec().encodeMessage(<Object?>[null]),
+    );
   });
 
   for (final size in const [Size(360, 740), Size(393, 873), Size(430, 932)]) {
@@ -61,17 +66,38 @@ void main() {
       await tester.tap(find.byIcon(Icons.shutter_speed_outlined));
       await tester.pumpAndSettle();
       expect(find.text('Shutter speed'), findsOneWidget);
-      expect(find.byType(Slider), findsOneWidget);
+      expect(find.byType(ScaleDial), findsOneWidget);
+      expect(find.text('Auto'), findsOneWidget);
+      // Dragging the dial switches to manual and shows the new value.
+      await tester.drag(find.byType(ScaleDial), const Offset(-120, 0));
+      await tester.pumpAndSettle();
+      expect(find.text('AUTO'), findsNothing);
       if (size.width == 393) {
         await expectLater(find.byType(MaterialApp), matchesGoldenFile('goldens/camera_393_drawer.png'));
       }
       await tester.tapAt(const Offset(20, 300));
       await tester.pumpAndSettle();
-      expect(find.byType(Slider), findsNothing);
+      expect(find.byType(ScaleDial), findsNothing);
 
       await tester.tap(find.byIcon(Icons.camera_outlined));
       await tester.pumpAndSettle();
       expect(find.text('2.2mm'), findsOneWidget);
     });
   }
+
+  testWidgets('camera screen handles larger system text', (tester) async {
+    tester.view.physicalSize = const Size(360, 740) * 3;
+    tester.view.devicePixelRatio = 3;
+    tester.view.padding = const FakeViewPadding(top: 120, bottom: 60);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: const CameraScreen()));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.byIcon(Icons.iso));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
 }

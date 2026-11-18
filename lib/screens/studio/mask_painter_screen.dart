@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import '../../ui/tokens.dart';
 
 /// The painted foreground: 0 = sky, 255 = ground, at [width]×[height].
 class ForegroundMask {
@@ -155,7 +156,7 @@ class _MaskPainterScreenState extends State<MaskPainterScreen> {
             child: Text(
               'Paint over the ground, trees and buildings. Leave the sky unpainted. '
               'The sky is aligned to the stars, the painted part stays still.',
-              style: TextStyle(color: Colors.white70, fontSize: 13),
+              style: TextStyle(color: V.textDim, fontSize: 13),
             ),
           ),
           Expanded(

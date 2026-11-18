@@ -8,6 +8,7 @@ import '../../studio/edit/photo_edit.dart';
 import '../../studio/processing.dart' show resizeRgba;
 import 'studio_widgets.dart';
 import '../../studio/image_disposal.dart';
+import '../../ui/tokens.dart';
 
 /// State of the photo editor: the edit, the rendered preview and helpers.
 class PhotoEditorController extends ChangeNotifier {
@@ -396,7 +397,7 @@ class CurvePanel extends StatelessWidget {
       children: [
         const Text(
           'Drag the points. Lower-left = shadows, upper-right = highlights.',
-          style: TextStyle(fontSize: 12, color: Colors.white54),
+          style: TextStyle(fontSize: 12, color: V.textDim),
         ),
         const SizedBox(height: 10),
         AspectRatio(
@@ -475,7 +476,7 @@ class _AstroPanel extends StatelessWidget {
           padding: EdgeInsets.only(top: 6),
           child: Text(
             'The live view is a smaller copy, so noise and star sizes look slightly different from the saved photo.',
-            style: TextStyle(fontSize: 11, color: Colors.white38),
+            style: TextStyle(fontSize: 11, color: V.textFaint),
           ),
         ),
       ],
@@ -944,7 +945,7 @@ class _CropPainter extends CustomPainter {
       Paint()..color = Colors.black.withValues(alpha: 0.6),
     );
     final line = Paint()
-      ..color = Colors.white38
+      ..color = V.textFaint
       ..strokeWidth = 0.8;
     for (var i = 1; i < 3; i++) {
       canvas.drawLine(

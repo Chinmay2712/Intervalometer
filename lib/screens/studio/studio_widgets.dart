@@ -4,10 +4,13 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-const kStudioAccent = Color(0xFF8DB8FF);
-const kStudioViolet = Color(0xFFB59CFF);
-const kStudioBg = Color(0xFF05060A);
-const kStudioGradient = LinearGradient(colors: [Color(0xFF8DB8FF), Color(0xFFB59CFF)]);
+import '../../ui/tokens.dart';
+
+// Studio uses the app-wide tokens (one palette everywhere).
+const kStudioAccent = V.ion;
+const kStudioViolet = V.nebula;
+const kStudioBg = V.night;
+const kStudioGradient = V.ionGradient;
 
 /// Deep night-sky backdrop: gradient, a faint Milky Way band and stars.
 class StarfieldBackground extends StatelessWidget {
@@ -96,8 +99,8 @@ class Glass extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                const Color(0xFF1C2130).withValues(alpha: opacity),
-                const Color(0xFF0E1018).withValues(alpha: opacity + 0.1),
+                V.raised.withValues(alpha: opacity),
+                V.surface.withValues(alpha: opacity + 0.1),
               ],
             ),
             border: Border.all(color: Colors.white.withValues(alpha: highlight ? 0.18 : 0.08)),
@@ -287,7 +290,7 @@ class ExpandingCapsule extends StatelessWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                Icon(item.icon, size: 22, color: selected ? Colors.white : Colors.white70),
+                Icon(item.icon, size: 22, color: selected ? Colors.white : V.textDim),
                 if (item.active)
                   Positioned(
                     right: 7,
@@ -404,7 +407,7 @@ class ToolSwitcher extends StatelessWidget {
                           children: [
                             Icon(items[i].icon,
                                 size: 22,
-                                color: !enabled ? Colors.white24 : (i == selected ? Colors.white : Colors.white54)),
+                                color: !enabled ? Colors.white24 : (i == selected ? Colors.white : V.textDim)),
                             const SizedBox(height: 3),
                             FittedBox(
                               fit: BoxFit.scaleDown,
@@ -415,7 +418,7 @@ class ToolSwitcher extends StatelessWidget {
                                   fontSize: 11,
                                   letterSpacing: 0.3,
                                   fontWeight: i == selected ? FontWeight.w600 : FontWeight.w400,
-                                  color: !enabled ? Colors.white24 : (i == selected ? Colors.white : Colors.white54),
+                                  color: !enabled ? Colors.white24 : (i == selected ? Colors.white : V.textDim),
                                 ),
                               ),
                             ),
@@ -453,7 +456,7 @@ class ActionPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null;
-    final fg = enabled ? (danger ? Colors.white : const Color(0xFF0B0E18)) : Colors.white38;
+    final fg = enabled ? (danger ? V.onIon : V.onIon) : V.textFaint;
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 200),
       opacity: enabled || busy ? 1 : 0.7,
@@ -466,12 +469,12 @@ class ActionPill extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
             gradient: enabled && !danger ? kStudioGradient : null,
-            color: danger ? const Color(0xFFE5484D) : (enabled ? null : Colors.white.withValues(alpha: 0.08)),
+            color: danger ? V.signal : (enabled ? null : Colors.white.withValues(alpha: 0.08)),
             border: enabled ? null : Border.all(color: Colors.white12),
             boxShadow: enabled
                 ? [
                     BoxShadow(
-                      color: (danger ? const Color(0xFFE5484D) : kStudioAccent).withValues(alpha: 0.4),
+                      color: (danger ? V.signal : kStudioAccent).withValues(alpha: 0.28),
                       blurRadius: 18,
                     ),
                   ]
@@ -532,13 +535,15 @@ class EditSlider extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(label,
-                      maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.white70)),
+                      maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: V.textDim)),
                 ),
                 Text(text,
                     style: TextStyle(
                         fontSize: 12,
+                        fontFamily: V.readoutFamily,
+                        fontWeight: FontWeight.w700,
                         fontFeatures: const [ui.FontFeature.tabularFigures()],
-                        color: value == neutral ? Colors.white38 : kStudioAccent)),
+                        color: value == neutral ? V.textFaint : kStudioAccent)),
               ],
             ),
           ),
@@ -600,7 +605,7 @@ class OptionChip extends StatelessWidget {
         child: Text(label,
             style: TextStyle(
                 fontSize: 12,
-                color: onTap == null ? Colors.white30 : (selected ? Colors.white : Colors.white70),
+                color: onTap == null ? Colors.white30 : (selected ? Colors.white : V.textDim),
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w400)),
       ),
     );
@@ -630,7 +635,7 @@ class OptionSwitch extends StatelessWidget {
               children: [
                 Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.white54)),
+                Text(subtitle, style: const TextStyle(fontSize: 12, color: V.textDim)),
               ],
             ),
           ),

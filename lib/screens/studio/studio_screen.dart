@@ -5,6 +5,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
+import '../../ui/tokens.dart';
+
 import '../../studio/edit/exporter.dart';
 import '../../studio/frame_sources.dart';
 import '../../studio/processing.dart';
@@ -126,7 +128,6 @@ class _StudioScreenState extends State<StudioScreen> {
     final chosen = await showModalBottomSheet<FrameSequence>(
       context: context,
       showDragHandle: true,
-      backgroundColor: const Color(0xFF12151C),
       builder: (_) => _SequenceSheet(sequences: sequences),
     );
     if (chosen != null) {
@@ -190,7 +191,6 @@ class _StudioScreenState extends State<StudioScreen> {
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF12151C),
       builder: (context) => StatefulBuilder(
         builder: (context, setSheet) => _PhotosSheet(
           paths: _paths,
@@ -468,7 +468,7 @@ class _StudioScreenState extends State<StudioScreen> {
           const Text(
             'Full keeps every pixel of your photos (a 48 MP shot stays 48 MP). '
             'Fast works at 3 MP: about 4× quicker and uses much less memory.',
-            style: TextStyle(fontSize: 12, color: Colors.white54),
+            style: TextStyle(fontSize: 12, color: V.textDim),
           ),
         ],
       ),
@@ -482,7 +482,7 @@ class _StudioScreenState extends State<StudioScreen> {
       panel: (_) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Frame rate', style: TextStyle(fontSize: 12, color: Colors.white70)),
+          const Text('Frame rate', style: TextStyle(fontSize: 12, color: V.textDim)),
           const SizedBox(height: 6),
           Wrap(
             spacing: 6,
@@ -492,7 +492,7 @@ class _StudioScreenState extends State<StudioScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          const Text('Resolution', style: TextStyle(fontSize: 12, color: Colors.white70)),
+          const Text('Resolution', style: TextStyle(fontSize: 12, color: V.textDim)),
           const SizedBox(height: 6),
           Wrap(
             spacing: 6,
@@ -513,7 +513,7 @@ class _StudioScreenState extends State<StudioScreen> {
             const SizedBox(height: 12),
             Text(
               '${_paths.length} frames → ${(_paths.length / _fps).toStringAsFixed(1)} s of video',
-              style: const TextStyle(fontSize: 12, color: Colors.white54),
+              style: const TextStyle(fontSize: 12, color: V.textDim),
             ),
           ],
         ],
@@ -574,7 +574,7 @@ class _StudioScreenState extends State<StudioScreen> {
                       Icon(
                         _mask == null ? Icons.warning_amber : Icons.check,
                         size: 16,
-                        color: _mask == null ? Colors.orangeAccent : kStudioAccent,
+                        color: _mask == null ? V.amber : kStudioAccent,
                       ),
                       const SizedBox(width: 6),
                       Expanded(
@@ -713,7 +713,7 @@ class _StudioScreenState extends State<StudioScreen> {
               child: Glass(
                 radius: 14,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                child: Text(_problem!, style: const TextStyle(fontSize: 12, color: Color(0xFFFFB86B))),
+                child: Text(_problem!, style: const TextStyle(fontSize: 12, color: V.amber)),
               ),
             ),
           ),
@@ -810,7 +810,7 @@ class _StudioScreenState extends State<StudioScreen> {
                   key: ValueKey(subtitle),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, color: Colors.white54),
+                  style: const TextStyle(fontSize: 12, color: V.textDim),
                 ),
               ),
             ],
@@ -831,7 +831,6 @@ class _StudioScreenState extends State<StudioScreen> {
         child: PopupMenuButton<String>(
           tooltip: 'More',
           icon: const Icon(Icons.more_vert, size: 20),
-          color: const Color(0xFF161A24),
           enabled: !_exporting,
           onSelected: (v) {
             switch (v) {
@@ -873,7 +872,6 @@ class _StudioScreenState extends State<StudioScreen> {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      backgroundColor: const Color(0xFF12151C),
       builder: (_) => SafeArea(
         child: ListView(
           shrinkWrap: true,
@@ -885,12 +883,12 @@ class _StudioScreenState extends State<StudioScreen> {
               'The original ${[if (r.imagePath != null) 'image', if (r.videoPath != null) 'video'].join(' and ')} '
               '${_exported ? 'was exported to' : 'is not in'} ${Platform.isIOS ? 'Photos' : 'your gallery (Valometer album)'}'
               '${_exported ? '' : ' yet'}. Export saves it with your edits; each export adds a new copy.',
-              style: const TextStyle(color: Colors.white60, fontSize: 13),
+              style: const TextStyle(color: V.textDim, fontSize: 13),
             ),
             for (final n in r.notes)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Text('• $n', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                child: Text('• $n', style: const TextStyle(color: V.textDim, fontSize: 13)),
               ),
           ],
         ),
@@ -988,7 +986,7 @@ class _StudioScreenState extends State<StudioScreen> {
                 child: Text(
                   body,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 13.5, height: 1.4, color: Colors.white60),
+                  style: const TextStyle(fontSize: 13.5, height: 1.4, color: V.textDim),
                 ),
               ),
             ],
@@ -1004,7 +1002,7 @@ class _StudioScreenState extends State<StudioScreen> {
             Expanded(child: Container(height: 1, color: Colors.white10)),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 12),
-              child: Text('CHOOSE PHOTOS', style: TextStyle(fontSize: 11, letterSpacing: 1.8, color: Colors.white38)),
+              child: Text('CHOOSE PHOTOS', style: TextStyle(fontSize: 11, letterSpacing: 1.8, color: V.textFaint)),
             ),
             Expanded(child: Container(height: 1, color: Colors.white10)),
           ],
@@ -1129,7 +1127,7 @@ class _StudioScreenState extends State<StudioScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     child: Text(
                       index == 0 ? 'Reference · 1 / ${_paths.length}' : '${index + 1} / ${_paths.length}',
-                      style: const TextStyle(fontSize: 11, color: Colors.white70),
+                      style: const TextStyle(fontSize: 11, color: V.textDim),
                     ),
                   ),
                 ),
@@ -1158,7 +1156,7 @@ class _StudioScreenState extends State<StudioScreen> {
                         color: Colors.white.withValues(alpha: 0.05),
                         border: Border.all(color: Colors.white24),
                       ),
-                      child: const Icon(Icons.add, color: Colors.white70),
+                      child: const Icon(Icons.add, color: V.textDim),
                     ),
                   );
                 }
@@ -1247,7 +1245,7 @@ class _StudioScreenState extends State<StudioScreen> {
                       const SizedBox(height: 3),
                       const Text(
                         'Keep Valometer open. The screen stays on until it finishes.',
-                        style: TextStyle(fontSize: 11, color: Colors.white38),
+                        style: TextStyle(fontSize: 11, color: V.textFaint),
                       ),
                     ],
                   ),
@@ -1305,9 +1303,9 @@ class _StudioScreenState extends State<StudioScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(icon, size: 16, color: _view == v ? Colors.white : Colors.white60),
+                        Icon(icon, size: 16, color: _view == v ? Colors.white : V.textDim),
                         const SizedBox(width: 6),
-                        Text(label, style: TextStyle(fontSize: 12, color: _view == v ? Colors.white : Colors.white60)),
+                        Text(label, style: TextStyle(fontSize: 12, color: _view == v ? Colors.white : V.textDim)),
                       ],
                     ),
                   ),
@@ -1338,7 +1336,7 @@ class _StudioScreenState extends State<StudioScreen> {
                 children: [
                   const Text('Exporting', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
-                  Text(_exportStage, style: const TextStyle(fontSize: 13, color: Colors.white70)),
+                  Text(_exportStage, style: const TextStyle(fontSize: 13, color: V.textDim)),
                   const SizedBox(height: 12),
                   LinearProgressIndicator(
                     value: _view == _ResultView.video && _exportFraction > 0 ? _exportFraction : null,
@@ -1379,7 +1377,7 @@ class _OrbitPainter extends CustomPainter {
     for (final (r, angle, s, color) in const [
       (60.0, -0.6, 3.0, kStudioAccent),
       (74.0, 2.3, 2.2, kStudioViolet),
-      (44.0, 3.9, 2.0, Colors.white70),
+      (44.0, 3.9, 2.0, V.textDim),
     ]) {
       dot.color = color;
       canvas.drawCircle(c + Offset(cos(angle) * r, sin(angle) * r), s, dot);
@@ -1425,7 +1423,7 @@ class _SourceTile extends StatelessWidget {
                   gradient: primary ? kStudioGradient : null,
                   color: primary ? null : Colors.white.withValues(alpha: 0.08),
                 ),
-                child: Icon(icon, size: 20, color: primary ? const Color(0xFF0B0E18) : Colors.white),
+                child: Icon(icon, size: 20, color: primary ? V.onIon : V.text),
               ),
               const SizedBox(height: 10),
               Text(
@@ -1439,7 +1437,7 @@ class _SourceTile extends StatelessWidget {
                 subtitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 11, color: Colors.white54),
+                style: const TextStyle(fontSize: 11, color: V.textDim),
               ),
             ],
           ),
@@ -1551,7 +1549,7 @@ class _PhotosSheet extends StatelessWidget {
               padding: EdgeInsets.all(12),
               child: Text(
                 'Sorted by time taken. The first photo is the reference for alignment.',
-                style: TextStyle(fontSize: 11, color: Colors.white38),
+                style: TextStyle(fontSize: 11, color: V.textFaint),
               ),
             ),
           ],

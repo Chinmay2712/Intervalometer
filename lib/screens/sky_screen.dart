@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../ui/tokens.dart';
+
 import '../astro/astronomy.dart';
 import '../astro/night_report.dart';
 import '../sky/location_service.dart';
@@ -216,7 +218,7 @@ class _SkyScreenState extends State<SkyScreen> {
             const SizedBox(height: 16),
             const Text(
               'Times are in this phone\'s time zone. Weather data by Open-Meteo.com (CC BY 4.0).',
-              style: TextStyle(fontSize: 11, color: Colors.white38),
+              style: TextStyle(fontSize: 11, color: V.textFaint),
             ),
           ],
         ],
@@ -255,7 +257,7 @@ class _SkyScreenState extends State<SkyScreen> {
             if (_locationError != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
-                child: Text(_locationError!, style: const TextStyle(color: Colors.orangeAccent, fontSize: 12)),
+                child: Text(_locationError!, style: const TextStyle(color: V.amber, fontSize: 12)),
               ),
           ],
         ),
@@ -289,7 +291,7 @@ class _SkyScreenState extends State<SkyScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              if (icon != null) ...[Icon(icon, size: 18, color: const Color(0xFF7FB2FF)), const SizedBox(width: 8)],
+              if (icon != null) ...[Icon(icon, size: 18, color: V.ion), const SizedBox(width: 8)],
               Flexible(
                 child: Text(title,
                     maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium),
@@ -314,7 +316,7 @@ class _SkyScreenState extends State<SkyScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text('${_time(best.start)} – ${_time(best.end)}',
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF7FB2FF))),
+                style: V.readout(26, color: V.ion)),
           ),
         const SizedBox(height: 8),
         _kv('Full darkness', r.darkRanges.isEmpty ? 'none' : _dur(r.darkDuration)),
@@ -325,11 +327,11 @@ class _SkyScreenState extends State<SkyScreen> {
           const Padding(
             padding: EdgeInsets.only(top: 8),
             child: Row(children: [
-              Icon(Icons.water_drop_outlined, size: 16, color: Colors.orangeAccent),
+              Icon(Icons.water_drop_outlined, size: 16, color: V.amber),
               SizedBox(width: 6),
               Expanded(
                 child: Text('Dew likely: the lens may fog. Use a lens heater or hand warmer.',
-                    style: TextStyle(color: Colors.orangeAccent, fontSize: 13)),
+                    style: TextStyle(color: V.amber, fontSize: 13)),
               ),
             ]),
           ),
@@ -345,7 +347,7 @@ class _SkyScreenState extends State<SkyScreen> {
         NightTimeline(report: r, formatTime: _time),
         const SizedBox(height: 4),
         const Text('Bar: sky darkness (darkest = full astro night). Strips: moon up (cream), Milky Way core ≥ 10° (purple).',
-            style: TextStyle(fontSize: 11, color: Colors.white38)),
+            style: TextStyle(fontSize: 11, color: V.textFaint)),
         const SizedBox(height: 12),
         _kv('Sunset', _time(r.sunset)),
         _kv('Civil dusk (−6°)', _time(r.civilDusk)),
@@ -395,7 +397,7 @@ class _SkyScreenState extends State<SkyScreen> {
         _kv('Next new moon', '${_date(r.nextNewMoon)}, ${_time(r.nextNewMoon)}'),
         _kv('Next full moon', '${_date(r.nextFullMoon)}, ${_time(r.nextFullMoon)}'),
         const SizedBox(height: 8),
-        Text(impact, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+        Text(impact, style: const TextStyle(color: V.textDim, fontSize: 13)),
       ],
     );
   }
@@ -436,7 +438,7 @@ class _SkyScreenState extends State<SkyScreen> {
         Text(
           'Galactic centre in Sagittarius. "Visible" means at least ${Horizon.coreUseful.round()}° '
           'above the horizon during full darkness.',
-          style: const TextStyle(fontSize: 11, color: Colors.white38),
+          style: const TextStyle(fontSize: 11, color: V.textFaint),
         ),
       ],
     );
@@ -446,18 +448,18 @@ class _SkyScreenState extends State<SkyScreen> {
     final children = <Widget>[];
     if (_forecastError != null && _forecast == null) {
       children.add(Row(children: [
-        Expanded(child: Text(_forecastError!, style: const TextStyle(color: Colors.orangeAccent))),
+        Expanded(child: Text(_forecastError!, style: const TextStyle(color: V.amber))),
         TextButton(onPressed: () => _loadForecast(force: true), child: const Text('Retry')),
       ]));
     } else if (!r.hasForecast) {
       children.add(Text(_loadingForecast ? 'Loading forecast…' : 'No forecast for this night yet.',
-          style: const TextStyle(color: Colors.white60)));
+          style: const TextStyle(color: V.textDim)));
     } else {
       if (_forecast?.stale ?? false) {
         children.add(const Padding(
           padding: EdgeInsets.only(bottom: 8),
           child: Text('Offline: showing the last saved forecast.',
-              style: TextStyle(color: Colors.orangeAccent, fontSize: 12)),
+              style: TextStyle(color: V.amber, fontSize: 12)),
         ));
       }
       children.add(const Padding(
@@ -475,13 +477,13 @@ class _SkyScreenState extends State<SkyScreen> {
       children.add(const Padding(
         padding: EdgeInsets.only(top: 8),
         child: Text('Dot: shooting quality from darkness, clouds and moonlight.',
-            style: TextStyle(fontSize: 11, color: Colors.white38)),
+            style: TextStyle(fontSize: 11, color: V.textFaint)),
       ));
     }
     return _card(title: 'Cloud forecast', icon: Icons.cloud_outlined, children: children);
   }
 
-  static const _head = TextStyle(fontSize: 11, color: Colors.white54);
+  static const _head = TextStyle(fontSize: 11, color: V.textDim);
 
   Widget _hourRow(NightHour h) {
     final w = h.weather;
@@ -513,7 +515,7 @@ class _SkyScreenState extends State<SkyScreen> {
                             value: w.cloud / 100,
                             minHeight: 8,
                             backgroundColor: const Color(0xFF0E2A1A),
-                            color: Colors.white70,
+                            color: V.textDim,
                           ),
                         ),
                       ),
@@ -521,7 +523,7 @@ class _SkyScreenState extends State<SkyScreen> {
                         width: 92,
                         child: Text(
                           ' ${w.cloud}%  ${w.cloudLow ?? '-'}/${w.cloudMid ?? '-'}/${w.cloudHigh ?? '-'}',
-                          style: const TextStyle(fontSize: 11, color: Colors.white70),
+                          style: const TextStyle(fontSize: 11, color: V.textDim),
                         ),
                       ),
                     ]),
@@ -533,7 +535,7 @@ class _SkyScreenState extends State<SkyScreen> {
                     ? ''
                     : '${w!.temperature!.round()}° / ${w.dewPoint?.round() ?? '-'}°',
                 textAlign: TextAlign.right,
-                style: TextStyle(fontSize: 12, color: (w?.dewRisk ?? false) ? Colors.orangeAccent : Colors.white70),
+                style: TextStyle(fontSize: 12, color: (w?.dewRisk ?? false) ? V.amber : V.textDim),
               ),
             ),
           ],
@@ -543,11 +545,12 @@ class _SkyScreenState extends State<SkyScreen> {
   }
 
   Widget _kv(String k, String v) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
+        padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
           children: [
-            Expanded(child: Text(k, style: const TextStyle(color: Colors.white60))),
-            Flexible(child: Text(v, textAlign: TextAlign.right)),
+            Expanded(flex: 3, child: Text(k, style: const TextStyle(color: V.textDim))),
+            const SizedBox(width: 12),
+            Expanded(flex: 2, child: Text(v, textAlign: TextAlign.right, style: V.readout(16, weight: FontWeight.w400))),
           ],
         ),
       );

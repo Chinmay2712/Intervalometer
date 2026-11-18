@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../astro/astronomy.dart';
 import '../astro/night_report.dart';
+import '../ui/tokens.dart';
 
 /// Draws the moon's lit portion for a given phase (0 new … 0.5 full … 1).
 class MoonIcon extends StatelessWidget {
@@ -86,7 +87,7 @@ class NightTimeline extends StatelessWidget {
                     width: 32,
                     child: Text(formatTime(tick).substring(0, 2),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 10, color: Colors.white54)),
+                        style: const TextStyle(fontSize: 10, color: V.textDim)),
                   ),
               ],
             ),

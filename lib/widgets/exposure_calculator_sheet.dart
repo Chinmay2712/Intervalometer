@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:valometer_camera/valometer_camera.dart';
 
+import '../ui/tokens.dart';
+
 import '../utils/astro_math.dart';
 import '../utils/exposure.dart';
 
@@ -10,7 +12,6 @@ Future<double?> showExposureCalculator(BuildContext context, CameraCapabilities 
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    backgroundColor: const Color(0xFF12151C),
     builder: (_) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: _CalculatorSheet(caps: caps),
@@ -51,7 +52,7 @@ class _CalculatorSheetState extends State<_CalculatorSheet> {
             const SizedBox(height: 4),
             Text(
               'Longest shutter time before stars stretch into lines.',
-              style: text.bodySmall?.copyWith(color: Colors.white60),
+              style: text.bodySmall?.copyWith(color: V.textDim),
             ),
             const SizedBox(height: 16),
             Row(
@@ -77,7 +78,7 @@ class _CalculatorSheetState extends State<_CalculatorSheet> {
                 child: Text(
                   'Some values are estimates (this phone doesn\'t report them). '
                   'Look up your camera specs and correct them for a better result.',
-                  style: text.bodySmall?.copyWith(color: Colors.orangeAccent),
+                  style: text.bodySmall?.copyWith(color: V.amber),
                 ),
               ),
             const SizedBox(height: 20),
@@ -134,14 +135,14 @@ class _CalculatorSheetState extends State<_CalculatorSheet> {
               children: [
                 Text('$title · ${_secondsLabel(seconds)}', style: text.titleMedium),
                 const SizedBox(height: 2),
-                Text(subtitle, style: text.bodySmall?.copyWith(color: Colors.white60)),
+                Text(subtitle, style: text.bodySmall?.copyWith(color: V.textDim)),
                 if (capped)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       'This camera stops at ${formatShutter(maxShutter)}. Shoot '
                       '${framesToStack(seconds, maxShutter)}+ frames and stack them for the same light.',
-                      style: text.bodySmall?.copyWith(color: const Color(0xFF7FB2FF)),
+                      style: text.bodySmall?.copyWith(color: V.ion),
                     ),
                   ),
               ],

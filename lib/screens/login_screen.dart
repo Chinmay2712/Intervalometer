@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../ui/tokens.dart';
+
 import '../auth/auth_service.dart';
 
 /// "Continue with Google / Apple" or skip. Pops itself after success when it
@@ -67,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Spacer(flex: 2),
-              const Icon(Icons.auto_awesome, size: 56, color: Color(0xFF7FB2FF)),
+              const Icon(Icons.auto_awesome, size: 56, color: V.ion),
               const SizedBox(height: 16),
               Text('VALOMETER',
                   textAlign: TextAlign.center,
@@ -83,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
               else ...[google, const SizedBox(height: 12), apple],
               if (_error != null) ...[
                 const SizedBox(height: 16),
-                Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: Colors.redAccent)),
+                Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: V.signal)),
               ],
               const SizedBox(height: 12),
               if (widget.canSkip)

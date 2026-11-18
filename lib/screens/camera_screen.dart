@@ -12,6 +12,8 @@ import '../intervalometer.dart';
 import '../widgets/account_sheet.dart';
 import '../storage/gallery_sync.dart';
 import '../theme.dart';
+import '../ui/scale_dial.dart';
+import '../ui/tokens.dart';
 import '../utils/exposure.dart';
 import '../utils/histogram.dart';
 import '../widgets/exposure_calculator_sheet.dart';
@@ -323,16 +325,16 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     return GestureDetector(
       onTap: jpeg == null ? null : _openReview,
       child: Container(
-        width: 44,
-        height: 44,
+        width: 52,
+        height: 52,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white38),
-          color: Colors.white10,
+          borderRadius: BorderRadius.circular(V.rSmall + 2),
+          border: Border.all(color: const Color(0x40FFFFFF)),
+          color: V.surface.withValues(alpha: 0.7),
         ),
         child: jpeg == null
-            ? const Icon(Icons.photo_outlined, size: 20, color: Colors.white38)
+            ? const Icon(Icons.photo_outlined, size: 22, color: V.textFaint)
             : Image.file(File(jpeg), fit: BoxFit.cover, cacheWidth: 132, gaplessPlayback: true),
       ),
     );
@@ -340,20 +342,26 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
   Widget _overlayButton({required String label, required IconData icon, required VoidCallback onTap}) {
     return Material(
-      color: Colors.black54,
-      borderRadius: BorderRadius.circular(16),
+      color: V.surface.withValues(alpha: 0.72),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(V.rSmall),
+        side: const BorderSide(color: V.line),
+      ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(V.rSmall),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16),
-              const SizedBox(width: 4),
-              Text(label, style: const TextStyle(fontSize: 12)),
-            ],
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 40),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 18),
+                const SizedBox(width: 6),
+                Text(label, style: V.readout(14, weight: FontWeight.w400)),
+              ],
+            ),
           ),
         ),
       ),
@@ -365,7 +373,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.black, // the viewfinder stays true black
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -401,19 +409,16 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                 child: SizedBox(
                   width: 150,
                   child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(6)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: Column(
+                    child: HudPanel(
+                      padding: const EdgeInsets.all(8),
+                      child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             SizedBox(height: 50, child: HistogramView(histogram: _histogram!, showRgb: false)),
                             const SizedBox(height: 4),
-                            Text(_histogram!.astroAdvice, style: const TextStyle(fontSize: 10)),
+                            Text(_histogram!.astroAdvice, style: const TextStyle(fontSize: 11, color: V.textDim)),
                           ],
                         ),
-                      ),
                     ),
                   ),
                 ),
@@ -432,7 +437,9 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       if (caps?.focalLength != null) '${caps!.focalLength!.toStringAsFixed(1)}mm',
       if (caps != null) 'max ${formatShutter(caps.maxShutter)}',
     ].join(' · ');
-    const dense = VisualDensity.compact;
+    // 44 pt icons: Apple's minimum touch target, and they still fit on a
+    // 360-wide phone next to the title.
+    const dense = VisualDensity(horizontal: -1, vertical: -1);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
       child: Row(
@@ -441,13 +448,18 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('VALOMETER',
-                    maxLines: 1,
-                    style: TextStyle(fontWeight: FontWeight.w700, letterSpacing: 3, fontSize: 16)),
+                const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text('VALOMETER',
+                      maxLines: 1,
+                      style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 3.2, fontSize: 16, color: V.text)),
+                ),
+                const SizedBox(height: 2),
                 Text(info,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11, color: Colors.white60)),
+                    style: V.readout(12, color: V.textDim, weight: FontWeight.w400)),
               ],
             ),
           ),
@@ -479,7 +491,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             tooltip: 'Histogram of last photo',
             visualDensity: dense,
             icon: Icon(_showHistogram ? Icons.bar_chart : Icons.bar_chart_outlined),
-            color: _showHistogram ? const Color(0xFF7FB2FF) : null,
+            color: _showHistogram ? V.ion : null,
+            isSelected: _showHistogram,
             onPressed: () => setState(() => _showHistogram = !_showHistogram),
           ),
           if (AuthService.instance.enabled)
@@ -494,7 +507,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             builder: (_, on, _) => IconButton(
               tooltip: 'Red night-vision mode',
               visualDensity: dense,
-              icon: Icon(on ? Icons.nightlight : Icons.nightlight_outlined),
+              isSelected: on,
+              icon: Icon(on ? Icons.remove_red_eye : Icons.remove_red_eye_outlined),
               onPressed: () => nightVision.value = !on,
             ),
           ),
@@ -569,12 +583,17 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     final label = _shutter >= 1 && !_autoExposure
         ? 'Exposing ${elapsed.inSeconds}s / ${formatShutter(_shutter)}'
         : 'Capturing…';
-    return DecoratedBox(
-      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(6)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Text(label, style: const TextStyle(fontSize: 12)),
-      ),
+    final fraction = _shutter >= 1 && !_autoExposure ? (elapsed.inMilliseconds / (_shutter * 1000)).clamp(0.0, 1.0) : null;
+    return HudPanel(
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        SizedBox(
+          width: 14,
+          height: 14,
+          child: CircularProgressIndicator(strokeWidth: 2, value: fraction, backgroundColor: V.line),
+        ),
+        const SizedBox(width: 8),
+        Text(label, style: V.readout(14, weight: FontWeight.w400)),
+      ]),
     );
   }
 
@@ -592,11 +611,31 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       if (_seq.failures > 0) text += ' · ${_seq.failures} failed';
     }
     if (text.isEmpty) return const SizedBox.shrink();
-    return DecoratedBox(
-      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(6)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Text(text, style: const TextStyle(fontSize: 13, color: Color(0xFF7FB2FF))),
+    final total = _seq.totalShots;
+    // Progress through the sequence (goal gradient): the bar fills shot by shot.
+    final progress = total == null || total == 0 ? null : (_seq.shotsTaken / total).clamp(0.0, 1.0);
+    return HudPanel(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(color: V.signal, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 8),
+            Text(text, style: V.readout(15)),
+          ]),
+          if (progress != null) ...[
+            const SizedBox(height: 6),
+            SizedBox(
+              width: 180,
+              child: LinearProgressIndicator(value: progress, minHeight: 3, borderRadius: BorderRadius.circular(2)),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -637,46 +676,66 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       ];
 
   /// Pro-mode icons under the title bar; each opens a drawer from the bottom.
+  /// One bounded strip groups them (common region). A manual value is bright
+  /// with an underline; auto values are dim, so the state reads by brightness
+  /// and shape, also under the red night-vision filter.
   Widget _controlRow() {
-    const accent = Color(0xFF7FB2FF);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Row(
-        children: [
-          for (final (control, icon, title, value, manual) in _controlItems)
-            Expanded(
-              child: Tooltip(
-                message: title,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(10),
-                  onTap: _caps == null ? null : () => _openDrawer(control),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      color: _active == control ? Colors.white24 : Colors.transparent,
-                    ),
-                    child: Column(
-                      children: [
-                        Icon(icon, size: 24, color: manual ? accent : Colors.white),
-                        const SizedBox(height: 2),
-                        Text(
-                          value,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: manual ? accent : Colors.white70,
-                          ),
+      padding: const EdgeInsets.fromLTRB(10, 2, 10, 0),
+      child: HudPanel(
+        radius: V.rMedium,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: Row(
+          children: [
+            for (final (control, icon, title, value, manual) in _controlItems)
+              Expanded(
+                child: Tooltip(
+                  message: title,
+                  child: Semantics(
+                    button: true,
+                    label: '$title, $value',
+                    excludeSemantics: true,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(V.rSmall),
+                      onTap: _caps == null ? null : () => _openDrawer(control),
+                      child: AnimatedContainer(
+                        duration: V.fast,
+                        constraints: const BoxConstraints(minHeight: V.touch + 4),
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(V.rSmall),
+                          color: _active == control ? V.raised : Colors.transparent,
                         ),
-                      ],
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(icon, size: 22, color: manual ? V.ion : V.textDim),
+                            const SizedBox(height: 3),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                value,
+                                maxLines: 1,
+                                style: V.readout(14, color: manual ? V.text : V.textDim,
+                                    weight: manual ? FontWeight.w700 : FontWeight.w400),
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            AnimatedContainer(
+                              duration: V.fast,
+                              width: manual ? 16 : 0,
+                              height: 2,
+                              decoration: BoxDecoration(color: V.ion, borderRadius: BorderRadius.circular(1)),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -686,8 +745,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      barrierColor: Colors.black12,
-      backgroundColor: const Color(0xFF101014),
+      barrierColor: Colors.black26,
       builder: (context) => SafeArea(
         child: ValueListenableBuilder<int>(
           valueListenable: _rev,
@@ -702,17 +760,21 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Row(
                       children: [
-                        Icon(item.$2, size: 20),
+                        Icon(item.$2, size: 20, color: V.textDim),
                         const SizedBox(width: 8),
                         Text(item.$3, style: Theme.of(context).textTheme.titleMedium),
                         const Spacer(),
-                        Text(item.$4,
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF7FB2FF))),
+                        AnimatedSwitcher(
+                          duration: V.fast,
+                          child: Text(item.$4,
+                              key: ValueKey(item.$4),
+                              style: V.readout(24, color: item.$5 ? V.ion : V.textDim)),
+                        ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 8),
-                  SizedBox(height: 92, child: _activePanel()),
+                  SizedBox(height: 96, child: _activePanel()),
                 ],
               ),
             );
@@ -743,19 +805,18 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             setState(() => _autoExposure = v);
             _applyExposure();
           },
-          slider: Slider(
-            value: index.toDouble(),
-            min: 0,
-            max: (stops.length - 1).toDouble(),
-            divisions: stops.length - 1,
-            label: isIso ? formatIso(stops[index]) : formatShutter(stops[index]),
-            onChanged: (v) {
+          slider: ScaleDial(
+            semanticsLabel: isIso ? 'ISO' : 'Shutter speed',
+            count: stops.length,
+            index: index,
+            label: (i) => isIso ? formatIso(stops[i]) : formatShutter(stops[i]),
+            onChanged: (i) {
               setState(() {
                 _autoExposure = false;
                 if (isIso) {
-                  _iso = stops[v.round()];
+                  _iso = stops[i];
                 } else {
-                  _shutter = stops[v.round()];
+                  _shutter = stops[i];
                 }
               });
               _applyExposure();
@@ -771,16 +832,17 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             setState(() => _autoWb = v);
             _applyWhiteBalance();
           },
-          slider: Slider(
-            value: _kelvin,
-            min: caps.minKelvin,
-            max: caps.maxKelvin,
-            divisions: ((caps.maxKelvin - caps.minKelvin) / 100).round().clamp(1, 1000),
-            label: '${_kelvin.round()}K',
-            onChanged: (v) {
+          slider: ScaleDial(
+            semanticsLabel: 'White balance',
+            count: ((caps.maxKelvin - caps.minKelvin) / 100).round().clamp(1, 1000) + 1,
+            index: ((_kelvin - caps.minKelvin) / 100).round(),
+            spacing: 12,
+            majorEvery: 10,
+            label: (i) => '${(caps.minKelvin + i * 100).round()}K',
+            onChanged: (i) {
               setState(() {
                 _autoWb = false;
-                _kelvin = v;
+                _kelvin = (caps.minKelvin + i * 100).clamp(caps.minKelvin, caps.maxKelvin);
               });
               _applyWhiteBalance();
             },
@@ -795,14 +857,17 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             setState(() => _autoFocus = v);
             _applyFocus();
           },
-          slider: Slider(
-            value: _focus,
-            divisions: 200,
-            label: _focus >= 0.999 ? '∞' : '${(_focus * 100).round()}',
-            onChanged: (v) {
+          slider: ScaleDial(
+            semanticsLabel: 'Focus',
+            count: 201,
+            index: (_focus * 200).round(),
+            spacing: 8,
+            majorEvery: 20,
+            label: (i) => i >= 200 ? '∞' : '${(i / 2).round()}',
+            onChanged: (i) {
               setState(() {
                 _autoFocus = false;
-                _focus = v;
+                _focus = i / 200;
               });
               _applyFocus();
             },
@@ -852,13 +917,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('AUTO', style: TextStyle(fontSize: 10, color: Colors.white54)),
-              Switch(value: auto, onChanged: onAuto),
-            ],
-          ),
+          _AutoToggle(value: auto, onChanged: onAuto),
+          const SizedBox(width: 8),
           ?leading,
           Expanded(child: slider),
           ?trailing,
@@ -868,7 +928,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   }
 
   Widget _unsupported(String text) =>
-      Center(child: Text(text, style: const TextStyle(color: Colors.white60)));
+      Center(child: Text(text, textAlign: TextAlign.center, style: const TextStyle(color: V.textDim)));
 
   /// Status, focus zoom, mode switch, thumbnail/format, shutter.
   Widget _bottomOverlay() {
@@ -908,6 +968,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
               ),
               const SizedBox(height: 10),
               SegmentedButton<_Mode>(
+                showSelectedIcon: false,
                 segments: const [
                   ButtonSegment(value: _Mode.single, label: Text('Single'), icon: Icon(Icons.photo_camera_outlined)),
                   ButtonSegment(value: _Mode.interval, label: Text('Interval'), icon: Icon(Icons.timer_outlined)),
@@ -931,14 +992,15 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                               const Padding(
                                 padding: EdgeInsets.only(left: 2, bottom: 2),
                                 child: Text('FORMAT',
-                                    style: TextStyle(fontSize: 9, letterSpacing: 1.2, color: Colors.white54)),
+                                    style: TextStyle(fontSize: 10, letterSpacing: 1.4, color: V.textDim)),
                               ),
                               ElevatedButton(
                                 onPressed: _caps != null && !running ? _pickFormat : null,
                                 style: ElevatedButton.styleFrom(
-                                  minimumSize: const Size(0, 36),
+                                  minimumSize: const Size(0, 40),
                                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  backgroundColor: V.surface.withValues(alpha: 0.72),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(V.rSmall)),
                                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                 ),
                                 child: FittedBox(
@@ -946,7 +1008,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                                   child: Text(
                                     _output.label,
                                     maxLines: 1,
-                                    style: const TextStyle(fontWeight: FontWeight.w600, letterSpacing: 0.5),
+                                    style: V.readout(15),
                                   ),
                                 ),
                               ),
@@ -966,7 +1028,13 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                     child: Align(
                       alignment: Alignment.centerRight,
                       child: _mode == _Mode.interval
-                          ? TextButton.icon(
+                          ? OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(0, 44),
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                backgroundColor: V.surface.withValues(alpha: 0.72),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(V.rSmall)),
+                              ),
                               onPressed: running
                                   ? null
                                   : () async {
@@ -977,9 +1045,10 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                                       );
                                       if (next != null) setState(() => _interval = next);
                                     },
-                              icon: const Icon(Icons.tune),
+                              icon: const Icon(Icons.tune, size: 18),
                               label: Text(
                                 '${_interval.shots == 0 ? '∞' : _interval.shots}×${formatShutter(_interval.intervalSeconds)}',
+                                style: V.readout(15),
                               ),
                             )
                           : const SizedBox.shrink(),
@@ -1010,36 +1079,88 @@ class _ShutterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: SizedBox(
-        width: 76,
-        height: 76,
-        child: Stack(
+    // The one big, distinct control (Fitts's law, Von Restorff): white disc
+    // for a photo, ringed timer for interval, a square while running.
+    final label = running ? 'Stop sequence' : (intervalMode ? 'Start interval sequence' : 'Take photo');
+    return Semantics(
+      button: true,
+      enabled: onPressed != null,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onPressed == null
+            ? null
+            : () {
+                HapticFeedback.mediumImpact();
+                onPressed!();
+              },
+        child: SizedBox(
+          width: 84,
+          height: 84,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: onPressed == null ? V.textFaint : V.text, width: 3),
+                ),
+              ),
+              if (busy)
+                const SizedBox(
+                  width: 84,
+                  height: 84,
+                  child: CircularProgressIndicator(strokeWidth: 3),
+                ),
+              AnimatedContainer(
+                duration: V.motion(context, const Duration(milliseconds: 200)),
+                curve: Curves.easeOutCubic,
+                width: running ? 30 : 66,
+                height: running ? 30 : 66,
+                decoration: BoxDecoration(
+                  color: running ? V.signal : (intervalMode ? V.ion : V.text),
+                  borderRadius: BorderRadius.circular(running ? 7 : 33),
+                ),
+                child: intervalMode && !running ? const Icon(Icons.timer_outlined, color: V.onIon, size: 26) : null,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Labelled Auto on/off button for the pro-mode drawers. "Auto" filled =
+/// automatic; outlined = manual.
+class _AutoToggle extends StatelessWidget {
+  const _AutoToggle({required this.value, required this.onChanged});
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      toggled: value,
+      label: 'Automatic',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onChanged(!value);
+        },
+        child: AnimatedContainer(
+          duration: V.fast,
+          width: 64,
+          height: V.touch,
           alignment: Alignment.center,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 4),
-              ),
-            ),
-            if (busy)
-              const SizedBox(
-                width: 76,
-                height: 76,
-                child: CircularProgressIndicator(strokeWidth: 4, color: Color(0xFF7FB2FF)),
-              ),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: running ? 28 : 60,
-              height: running ? 28 : 60,
-              decoration: BoxDecoration(
-                color: running ? Colors.redAccent : (intervalMode ? const Color(0xFF7FB2FF) : Colors.white),
-                borderRadius: BorderRadius.circular(running ? 6 : 30),
-              ),
-            ),
-          ],
+          decoration: BoxDecoration(
+            color: value ? V.ion : Colors.transparent,
+            borderRadius: BorderRadius.circular(V.rSmall),
+            border: Border.all(color: value ? V.ion : const Color(0x40FFFFFF)),
+          ),
+          child: Text('Auto',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: value ? V.onIon : V.textDim)),
         ),
       ),
     );
@@ -1053,8 +1174,8 @@ class _ThirdsPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final p = Paint()
-      ..color = Colors.white24
-      ..strokeWidth = 0.5;
+      ..color = const Color(0x33FFFFFF)
+      ..strokeWidth = 0.6;
     for (var i = 1; i < 3; i++) {
       final x = size.width * i / 3;
       final y = size.height * i / 3;
