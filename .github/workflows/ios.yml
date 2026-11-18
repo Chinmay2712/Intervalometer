@@ -1,0 +1,55 @@
+name: iOS build
+
+# Builds an unsigned .ipa on a GitHub-hosted Mac. Download it from the run's
+# "Artifacts" section and install it with Sideloadly (signs it with your Apple ID).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.4
+          cache: true
+
+      # env.json is not in the repo. Use the ENV_JSON secret if you add one
+      # (Settings > Secrets and variables > Actions), otherwise empty values.
+      - name: Create env.json
+        env:
+          ENV_JSON: ${{ secrets.ENV_JSON }}
+        run: |
+          if [ -n "$ENV_JSON" ]; then echo "$ENV_JSON" > env.json; else cp env.example.json env.json; fi
+
+      - name: Install packages
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test
+
+      # A free Apple ID can't sign "Sign in with Apple". Login is hidden in the
+      # app for now, so drop it from this build only.
+      - name: Remove Sign in with Apple entitlement
+        run: /usr/libexec/PlistBuddy -c "Delete :com.apple.developer.applesignin" ios/Runner/Runner.entitlements || true
+
+      - name: Build iOS app (unsigned)
+        run: flutter build ios --release --no-codesign --dart-define-from-file=env.json
+
+      - name: Package .ipa
+        run: |
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qr Valometer.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Valometer-ios
+          path: Valometer.ipa
+          retention-days: 30
