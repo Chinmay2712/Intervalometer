@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreImage
 import Flutter
 import Photos
 import UIKit
@@ -188,7 +189,16 @@ final class ValometerCameraSession: NSObject, FlutterTexture, AVCaptureVideoData
   private let bufferLock = NSLock()
   private var latestBuffer: CVPixelBuffer?
   private var inFlight: [Int64: PhotoCaptureProcessor] = [:]
+  private var stackInFlight: StackCaptureProcessor?
   private var closed = false
+
+  /// Longest shutter offered. Past the sensor's own limit, photos are built
+  /// from back-to-back frames added together (see [StackCaptureProcessor]).
+  static let maxStackedShutter = 30.0
+  /// Frames per photo for the current manual shutter (1 = single exposure),
+  /// and the total exposure they add up to. Touched only on sessionQueue.
+  private var stackFrames = 1
+  private var stackTotal = 0.0
 
   init(device: AVCaptureDevice, registry: FlutterTextureRegistry) {
     self.device = device
@@ -234,6 +244,7 @@ final class ValometerCameraSession: NSObject, FlutterTexture, AVCaptureVideoData
     let input = try AVCaptureDeviceInput(device: device)
     guard session.canAddInput(input) else { throw Self.err("Cannot use this camera.") }
     session.addInput(input)
+    useLongestExposureFormat()
 
     videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
     videoOutput.alwaysDiscardsLateVideoFrames = true
@@ -249,6 +260,41 @@ final class ValometerCameraSession: NSObject, FlutterTexture, AVCaptureVideoData
       if let c = connection, c.isVideoRotationAngleSupported(90) {
         c.videoRotationAngle = 90
       }
+    }
+  }
+
+  /// The .photo preset picks a sensor mode whose longest exposure is often
+  /// only about 1 s, while other modes of the same sensor allow longer. Switch
+  /// to the mode with the longest exposure that keeps the 4:3 shape, the
+  /// pixel format and at least the same photo resolution.
+  private func useLongestExposureFormat() {
+    let current = device.activeFormat
+    func dims(_ f: AVCaptureDevice.Format) -> CMVideoDimensions { CMVideoFormatDescriptionGetDimensions(f.formatDescription) }
+    func photoPixels(_ f: AVCaptureDevice.Format) -> Int {
+      f.supportedMaxPhotoDimensions.map { Int($0.width) * Int($0.height) }.max() ?? 0
+    }
+    let cd = dims(current)
+    guard cd.height > 0 else { return }
+    let aspect = Double(cd.width) / Double(cd.height)
+    // Keep the live preview light: no bigger video frames than 12 MP.
+    let maxVideoPixels = max(Int(cd.width) * Int(cd.height), 4032 * 3024)
+    let subtype = CMFormatDescriptionGetMediaSubType(current.formatDescription)
+    let candidates = device.formats.filter { f in
+      let d = dims(f)
+      guard d.height > 0 else { return false }
+      return abs(Double(d.width) / Double(d.height) - aspect) < 0.01
+        && Int(d.width) * Int(d.height) <= maxVideoPixels
+        && photoPixels(f) >= photoPixels(current)
+        && CMFormatDescriptionGetMediaSubType(f.formatDescription) == subtype
+    }
+    guard let best = candidates.max(by: { CMTimeCompare($0.maxExposureDuration, $1.maxExposureDuration) < 0 }),
+          CMTimeCompare(best.maxExposureDuration, current.maxExposureDuration) > 0 else { return }
+    do {
+      try device.lockForConfiguration()
+      device.activeFormat = best
+      device.unlockForConfiguration()
+    } catch {
+      // Keep the preset's format.
     }
   }
 
@@ -270,7 +316,11 @@ final class ValometerCameraSession: NSObject, FlutterTexture, AVCaptureVideoData
       "minIso": Double(f.minISO),
       "maxIso": Double(f.maxISO),
       "minShutter": CMTimeGetSeconds(f.minExposureDuration),
-      "maxShutter": CMTimeGetSeconds(f.maxExposureDuration),
+      // Longer than the sensor allows is shot as stacked frames.
+      "maxShutter": device.isExposureModeSupported(.custom)
+        ? max(CMTimeGetSeconds(f.maxExposureDuration), Self.maxStackedShutter)
+        : CMTimeGetSeconds(f.maxExposureDuration),
+      "nativeMaxShutter": CMTimeGetSeconds(f.maxExposureDuration),
       "minKelvin": 2000.0,
       "maxKelvin": 10000.0,
       "supportsManualExposure": device.isExposureModeSupported(.custom),
@@ -325,6 +375,7 @@ final class ValometerCameraSession: NSObject, FlutterTexture, AVCaptureVideoData
 
   func setExposure(auto: Bool, iso: Float?, shutter: Double?, result: @escaping FlutterResult) {
     configureDevice(result) { d in
+      self.stackFrames = 1
       if auto {
         if d.isExposureModeSupported(.continuousAutoExposure) { d.exposureMode = .continuousAutoExposure }
         return
@@ -332,7 +383,17 @@ final class ValometerCameraSession: NSObject, FlutterTexture, AVCaptureVideoData
       guard d.isExposureModeSupported(.custom) else { throw Self.err("Manual exposure is not supported on this lens.") }
       let f = d.activeFormat
       let isoValue = min(max(iso ?? d.iso, f.minISO), f.maxISO)
-      var duration = shutter.map { CMTimeMakeWithSeconds($0, preferredTimescale: 1_000_000) } ?? d.exposureDuration
+      // Past the sensor's limit: split the shutter into equal frames that
+      // each fit, and add them up at capture time.
+      let hardwareMax = CMTimeGetSeconds(f.maxExposureDuration)
+      var seconds = shutter.map { min($0, Self.maxStackedShutter) } ?? CMTimeGetSeconds(d.exposureDuration)
+      if hardwareMax > 0 && seconds > hardwareMax * 1.0001 {
+        let frames = Int((seconds / hardwareMax - 1e-6).rounded(.up))
+        self.stackFrames = frames
+        self.stackTotal = seconds
+        seconds /= Double(frames)
+      }
+      var duration = CMTimeMakeWithSeconds(seconds, preferredTimescale: 1_000_000)
       if CMTimeCompare(duration, f.minExposureDuration) < 0 { duration = f.minExposureDuration }
       if CMTimeCompare(duration, f.maxExposureDuration) > 0 { duration = f.maxExposureDuration }
       d.setExposureModeCustom(duration: duration, iso: isoValue, completionHandler: nil)
@@ -396,6 +457,10 @@ final class ValometerCameraSession: NSObject, FlutterTexture, AVCaptureVideoData
       let rawType = raw
         ? self.photoOutput.availableRawPhotoPixelFormatTypes.first(where: { AVCapturePhotoOutput.isBayerRAWPixelFormat($0) })
         : nil
+      if self.stackFrames > 1 {
+        self.captureStacked(format: format, result: result)
+        return
+      }
       if format == "none" && rawType == nil {
         DispatchQueue.main.async { result(FlutterError(code: "capture_failed", message: "This camera can't shoot RAW.", details: nil)) }
         return
@@ -436,8 +501,160 @@ final class ValometerCameraSession: NSObject, FlutterTexture, AVCaptureVideoData
     }
   }
 
+  /// Long exposure past the sensor's limit: [stackFrames] back-to-back
+  /// frames, added together into one photo. RAW is not possible here, so a
+  /// RAW-only request gets a 16-bit TIFF instead.
+  private func captureStacked(format: String, result: @escaping FlutterResult) {
+    let frames = stackFrames
+    let processor = StackCaptureProcessor(frames: frames, totalSeconds: stackTotal, format: format,
+      next: { [weak self] in
+        self?.sessionQueue.async {
+          guard let self, let p = self.stackInFlight else { return }
+          if self.closed { return p.fail(Self.err("Camera is closed.")) }
+          self.photoOutput.capturePhoto(with: self.stackFrameSettings(), delegate: p)
+        }
+      },
+      completion: { [weak self] outcome in
+        self?.sessionQueue.async { self?.stackInFlight = nil }
+        DispatchQueue.main.async {
+          switch outcome {
+          case .success(let map): result(map)
+          case .failure(let error):
+            result(FlutterError(code: "capture_failed", message: error.localizedDescription, details: nil))
+          }
+        }
+      })
+    stackInFlight = processor
+    photoOutput.capturePhoto(with: stackFrameSettings(), delegate: processor)
+  }
+
+  /// Uncompressed frames where possible, so nothing is lost before adding.
+  private func stackFrameSettings() -> AVCapturePhotoSettings {
+    let settings = uncompressedAvailable
+      ? AVCapturePhotoSettings(format: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA])
+      : AVCapturePhotoSettings(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
+    settings.flashMode = .off
+    settings.photoQualityPrioritization = .speed
+    return settings
+  }
+
   static func err(_ message: String) -> NSError {
     NSError(domain: "Valometer", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
+  }
+}
+
+// MARK: - Stacked long exposure
+
+/// Adds [frames] photos together in linear light, so the result has the
+/// brightness of one exposure as long as all of them together (the same
+/// approach long-exposure apps use, since iOS caps a single exposure).
+final class StackCaptureProcessor: NSObject, AVCapturePhotoCaptureDelegate {
+  private let frames: Int
+  private let totalSeconds: Double
+  private let format: String
+  private let next: () -> Void
+  private let completion: (Result<[String: Any], Error>) -> Void
+  private var accumulator: CIImageAccumulator?
+  private var metadata: [String: Any] = [:]
+  private var taken = 0
+  private var frameError: Error?
+  private var finished = false
+
+  init(frames: Int, totalSeconds: Double, format: String, next: @escaping () -> Void,
+       completion: @escaping (Result<[String: Any], Error>) -> Void) {
+    self.frames = frames
+    self.totalSeconds = totalSeconds
+    self.format = format
+    self.next = next
+    self.completion = completion
+  }
+
+  func fail(_ error: Error) {
+    guard !finished else { return }
+    finished = true
+    completion(.failure(error))
+  }
+
+  func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+    if let error = error {
+      frameError = error
+      return
+    }
+    var image: CIImage?
+    if let buffer = photo.pixelBuffer {
+      image = CIImage(cvPixelBuffer: buffer)
+    } else if let data = photo.fileDataRepresentation() {
+      image = CIImage(data: data)
+    }
+    guard let image else {
+      frameError = ImageWriter.err("No image data.")
+      return
+    }
+    if taken == 0 { metadata = photo.metadata }
+    if let acc = accumulator {
+      acc.setImage(image.applyingFilter("CIAdditionCompositing",
+                                        parameters: [kCIInputBackgroundImageKey: acc.image()]))
+    } else if let acc = CIImageAccumulator(extent: image.extent, format: .RGBAh,
+                                           colorSpace: CGColorSpace(name: CGColorSpace.extendedLinearSRGB)!) {
+      acc.setImage(image)
+      accumulator = acc
+    } else {
+      frameError = ImageWriter.err("Not enough memory to stack this exposure.")
+      return
+    }
+    taken += 1
+  }
+
+  func photoOutput(_ output: AVCapturePhotoOutput, didFinishCaptureFor resolvedSettings: AVCaptureResolvedPhotoSettings, error: Error?) {
+    if let error = error ?? frameError { return fail(error) }
+    if taken < frames { return next() }
+    DispatchQueue.global(qos: .userInitiated).async { self.save() }
+  }
+
+  private func save() {
+    do {
+      guard let acc = accumulator else { throw ImageWriter.err("No frames captured.") }
+      let deep = format == "png" || format == "tiff" || format == "none"
+      let context = CIContext(options: [.workingFormat: CIFormat.RGBAh])
+      let space = CGColorSpace(name: CGColorSpace.sRGB)!
+      guard let cg = context.createCGImage(acc.image(), from: acc.extent,
+                                           format: deep ? .RGBA16 : .RGBA8, colorSpace: space) else {
+        throw ImageWriter.err("Could not build the stacked photo.")
+      }
+      var meta = metadata
+      var exif = meta[kCGImagePropertyExifDictionary as String] as? [String: Any] ?? [:]
+      exif[kCGImagePropertyExifExposureTime as String] = totalSeconds
+      meta[kCGImagePropertyExifDictionary as String] = exif
+
+      let dir = try PhotoCaptureProcessor.outputDirectory()
+      let stamp = PhotoCaptureProcessor.timestamp()
+      func url(_ ext: String) -> URL { dir.appendingPathComponent("VAL_\(stamp).\(ext)") }
+      let jpegURL = url("jpg")
+      try ImageWriter.write(cg, metadata: meta, to: jpegURL, type: .jpeg)
+      var map: [String: Any] = ["jpegPath": jpegURL.path, "stackedFrames": frames]
+      let out: URL
+      switch format {
+      case "jpeg":
+        out = jpegURL
+      case "heic":
+        out = url("heic")
+        try ImageWriter.write(cg, metadata: meta, to: out, type: .heic)
+      case "png":
+        out = url("png")
+        try ImageWriter.write(cg, metadata: meta, to: out, type: .png)
+      default:  // tiff, or RAW-only (DNG can't be stacked)
+        out = url("tif")
+        try ImageWriter.write(cg, metadata: meta, to: out, type: .tiff)
+      }
+      map["photoPath"] = out.path
+      PhotoCaptureProcessor.saveToPhotos([out]) { ids in
+        map["gallery"] = ids
+        self.finished = true
+        self.completion(.success(map))
+      }
+    } catch {
+      fail(error)
+    }
   }
 }
 
@@ -546,14 +763,14 @@ final class PhotoCaptureProcessor: NSObject, AVCapturePhotoCaptureDelegate {
     return UTType(type)?.conforms(to: .heic) == true
   }
 
-  private static func outputDirectory() throws -> URL {
+  static func outputDirectory() throws -> URL {
     let docs = try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
     let dir = docs.appendingPathComponent("Valometer", isDirectory: true)
     try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
     return dir
   }
 
-  private static func timestamp() -> String {
+  static func timestamp() -> String {
     let f = DateFormatter()
     f.dateFormat = "yyyyMMdd_HHmmss_SSS"
     f.locale = Locale(identifier: "en_US_POSIX")
@@ -562,7 +779,7 @@ final class PhotoCaptureProcessor: NSObject, AVCapturePhotoCaptureDelegate {
 
   /// Adds each file to the Photos library as its own asset (photo and DNG).
   /// Completes with file path → asset identifier.
-  private static func saveToPhotos(_ urls: [URL], done: @escaping ([String: String]) -> Void) {
+  static func saveToPhotos(_ urls: [URL], done: @escaping ([String: String]) -> Void) {
     guard !urls.isEmpty else { return done([:]) }
     PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
       guard status == .authorized || status == .limited else { return done([:]) }
@@ -601,11 +818,14 @@ enum ImageWriter {
     let orientationKey = kCGImagePropertyOrientation as String
     if type == .png || type == .tiff {
       let o = (meta[orientationKey] as? NSNumber)?.uint32Value ?? 1
-      image = upright(cg, orientation: CGImagePropertyOrientation(rawValue: o) ?? .up) ?? cg
-      meta[orientationKey] = 1
-      if var tiff = meta[kCGImagePropertyTIFFDictionary as String] as? [String: Any] {
-        tiff[kCGImagePropertyTIFFOrientation as String] = 1
-        meta[kCGImagePropertyTIFFDictionary as String] = tiff
+      // Only drop the orientation tag once the pixels are really upright.
+      if let turned = upright(cg, orientation: CGImagePropertyOrientation(rawValue: o) ?? .up) {
+        image = turned
+        meta[orientationKey] = 1
+        if var tiff = meta[kCGImagePropertyTIFFDictionary as String] as? [String: Any] {
+          tiff[kCGImagePropertyTIFFOrientation as String] = 1
+          meta[kCGImagePropertyTIFFDictionary as String] = tiff
+        }
       }
     }
     if type == .jpeg || type == .heic {
@@ -629,9 +849,15 @@ enum ImageWriter {
     default: return cg  // mirrored variants never come from the back camera
     }
     let ow = swap ? h : w, oh = swap ? w : h
-    guard let ctx = CGContext(data: nil, width: ow, height: oh, bitsPerComponent: 8, bytesPerRow: 0,
-                              space: CGColorSpace(name: CGColorSpace.sRGB)!,
-                              bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return nil }
+    // 16-bit photos (stacked PNG/TIFF) keep their depth.
+    let space = CGColorSpace(name: CGColorSpace.sRGB)!
+    let deepCtx = cg.bitsPerComponent > 8
+      ? CGContext(data: nil, width: ow, height: oh, bitsPerComponent: 16, bytesPerRow: 0, space: space,
+                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+      : nil
+    guard let ctx = deepCtx ?? CGContext(data: nil, width: ow, height: oh, bitsPerComponent: 8, bytesPerRow: 0,
+                                         space: space, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+    else { return nil }
     // CoreGraphics origin is bottom-left.
     switch orientation {
     case .down:

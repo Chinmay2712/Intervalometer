@@ -26,6 +26,7 @@ class CameraCapabilities {
     required this.maxIso,
     required this.minShutter,
     required this.maxShutter,
+    double? nativeMaxShutter,
     required this.minKelvin,
     required this.maxKelvin,
     required this.supportsManualExposure,
@@ -40,7 +41,7 @@ class CameraCapabilities {
     this.sensorWidthMm,
     this.pixelPitchUm,
     this.formats = const {PhotoFormat.jpeg: FormatSupport.native},
-  });
+  }) : nativeMaxShutter = nativeMaxShutter ?? maxShutter;
 
   /// How each output format is produced on this camera. Missing = unavailable.
   final Map<PhotoFormat, FormatSupport> formats;
@@ -66,6 +67,15 @@ class CameraCapabilities {
   final double maxIso;
   final double minShutter;
   final double maxShutter;
+
+  /// Longest single exposure the sensor can take. Above it (iOS only) the
+  /// camera shoots several back-to-back frames and adds them into one photo,
+  /// up to [maxShutter].
+  final double nativeMaxShutter;
+
+  /// Frames added together for [shutter] seconds (1 = a single exposure).
+  int framesFor(double shutter) =>
+      shutter <= nativeMaxShutter * 1.0001 ? 1 : (shutter / nativeMaxShutter - 1e-6).ceil();
   final double minKelvin;
   final double maxKelvin;
   final bool supportsManualExposure;
@@ -93,6 +103,7 @@ class CameraCapabilities {
       maxIso: d('maxIso', 3200),
       minShutter: d('minShutter', 1 / 8000),
       maxShutter: d('maxShutter', 1),
+      nativeMaxShutter: (m['nativeMaxShutter'] as num?)?.toDouble(),
       minKelvin: d('minKelvin', 2000),
       maxKelvin: d('maxKelvin', 10000),
       supportsManualExposure: m['supportsManualExposure'] == true,

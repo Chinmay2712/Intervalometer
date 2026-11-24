@@ -85,6 +85,29 @@ void main() {
     });
   }
 
+  testWidgets('iPhone: shutters past the sensor limit say they are stacked', (tester) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('valometer/camera'),
+      (call) async => call.method == 'open' ? {..._caps, 'nativeMaxShutter': 1.0} : null,
+    );
+    tester.view.physicalSize = const Size(360, 740) * 3;
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: const CameraScreen()));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.shutter_speed_outlined));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Stacked:'), findsNothing);
+    // Drag towards the long end of the dial.
+    for (var i = 0; i < 3; i++) {
+      await tester.drag(find.byType(ScaleDial), const Offset(-300, 0));
+      await tester.pumpAndSettle();
+    }
+    expect(find.textContaining('Stacked:'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('camera screen handles larger system text', (tester) async {
     tester.view.physicalSize = const Size(360, 740) * 3;
     tester.view.devicePixelRatio = 3;

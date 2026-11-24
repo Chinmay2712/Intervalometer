@@ -451,7 +451,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                 const FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
-                  child: Text('VALOMETER',
+                  child: Text('INTERVALOMETER',
                       maxLines: 1,
                       style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 3.2, fontSize: 16, color: V.text)),
                 ),
@@ -575,6 +575,26 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
           ),
         ),
       ],
+    );
+  }
+
+  /// iPhones cap a single exposure (about 1 s). Longer shutters are shot as
+  /// back-to-back frames added into one photo; say so where it's set.
+  Widget _stackHint() {
+    final caps = _caps;
+    if (caps == null || _autoExposure) return const SizedBox.shrink();
+    final n = caps.framesFor(_shutter);
+    if (n <= 1) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          'Stacked: $n × ${formatShutter(_shutter / n)} frames added into one photo '
+          '(this camera\'s single exposure stops at ${formatShutter(caps.nativeMaxShutter)})',
+          style: const TextStyle(fontSize: 12, color: V.textDim),
+        ),
+      ),
     );
   }
 
@@ -773,6 +793,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                       ],
                     ),
                   ),
+                  if (control == _Control.shutter) _stackHint(),
                   const SizedBox(height: 8),
                   SizedBox(height: 96, child: _activePanel()),
                 ],

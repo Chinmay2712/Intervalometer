@@ -6,7 +6,7 @@ native camera code for full control:
 | | iOS | Android |
 |---|---|---|
 | Camera API | AVFoundation (Swift) | Camera2 (Kotlin) |
-| ISO / shutter | ✅ (shutter up to ~1 s, hardware limit) | ✅ (often up to 10–30 s) |
+| ISO / shutter | ✅ up to 30 s: single exposure up to the sensor limit (~1–3 s), longer shutters stacked from back-to-back frames | ✅ (often up to 10–30 s) |
 | White balance (Kelvin) | ✅ exact | ✅ exact on Android 16+, nearest preset before that |
 | Manual focus / ∞ | ✅ | ✅ (if the lens supports it) |
 | Aperture | read-only (shown in the top bar) | read-only |
@@ -202,7 +202,7 @@ packages/valometer_camera/   local plugin with the native camera code
 
 - Use a tripod and a start delay of 3–5 s so the tap doesn't shake the shot.
 - Pick RAW (or "Also save RAW") with the format button and stack the frames later (Sequator, Siril, DeepSkyStacker).
-- On iPhone, shoot many ~1 s frames and stack them, because single exposures are capped by iOS.
+- On iPhone, a single exposure is capped by iOS (no app, not even Blackmagic Camera, can go past it). Shutters longer than that are shot as back-to-back frames added into one photo with the same brightness, shown as "Stacked: N × …" in the shutter drawer. These shots can't include RAW; RAW-only becomes a 16-bit TIFF.
 - Switch on the red night-vision mode (moon icon) to keep your eyes dark-adapted.
 
 ## Roadmap (agreed, not built yet)
