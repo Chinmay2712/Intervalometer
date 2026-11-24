@@ -32,6 +32,7 @@ class ValometerCameraPlugin :
     private lateinit var textures: TextureRegistry
     private var activityBinding: ActivityPluginBinding? = null
     private var camera: CameraController? = null
+    private var remote: RemoteTrigger? = null
     private var pendingPermission: Pair<() -> Unit, () -> Unit>? = null
     private val main = Handler(Looper.getMainLooper())
 
@@ -40,18 +41,22 @@ class ValometerCameraPlugin :
         textures = binding.textureRegistry
         channel = MethodChannel(binding.binaryMessenger, "valometer/camera")
         channel.setMethodCallHandler(this)
+        remote = RemoteTrigger(context, binding.binaryMessenger)
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
         camera?.close()
         camera = null
+        remote?.dispose()
+        remote = null
     }
 
     // ---- ActivityAware (needed for the runtime permission prompt) ----
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activityBinding = binding
+        remote?.activity = binding.activity
         binding.addRequestPermissionsResultListener(this)
     }
 
@@ -63,6 +68,7 @@ class ValometerCameraPlugin :
     override fun onDetachedFromActivity() {
         activityBinding?.removeRequestPermissionsResultListener(this)
         activityBinding = null
+        remote?.activity = null
     }
 
     // ---- Method calls ----
@@ -250,6 +256,7 @@ class ValometerCameraPlugin :
         permissions: Array<out String>,
         grantResults: IntArray
     ): Boolean {
+        if (remote?.onRequestPermissionsResult(requestCode, grantResults) == true) return true
         if (requestCode != PERMISSION_REQUEST) return false
         val pending = pendingPermission ?: return true
         pendingPermission = null

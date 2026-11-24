@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,6 +21,7 @@ import '../widgets/exposure_calculator_sheet.dart';
 import '../widgets/format_sheet.dart';
 import '../widgets/histogram_view.dart';
 import '../widgets/interval_sheet.dart';
+import 'remote_screen.dart';
 import 'review_screen.dart';
 import 'sky_screen.dart';
 import 'studio/studio_screen.dart';
@@ -133,13 +135,26 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       if (_seq.isRunning) _seq.stop();
       _cam.close();
       setState(() => _caps = null);
-    } else if (state == AppLifecycleState.resumed && _caps == null) {
+    } else if (state == AppLifecycleState.resumed && _caps == null && !_remoteOpen) {
       // The user may have deleted photos in the gallery meanwhile.
       _open().whenComplete(() => unawaited(GallerySync.sync()));
     }
   }
 
   // ---------------------------------------------------------------- camera
+
+  /// True while the iPhone remote screen is on top (camera closed meanwhile).
+  bool _remoteOpen = false;
+
+  Future<void> _openRemote() async {
+    _remoteOpen = true;
+    await _cam.close();
+    if (mounted) setState(() => _caps = null);
+    if (!mounted) return;
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const RemoteScreen()));
+    _remoteOpen = false;
+    if (mounted) await _open();
+  }
 
   Future<void> _open() async {
     if (_opening) return;
@@ -976,7 +991,16 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                   Expanded(
                     child: Align(
                       alignment: Alignment.centerLeft,
-                      child: _capturing && _captureStart != null ? _exposureBadge() : _statusLine(),
+                      child: _capturing && _captureStart != null
+                          ? _exposureBadge()
+                          : _seq.isRunning || defaultTargetPlatform != TargetPlatform.android
+                              ? _statusLine()
+                              // Android: this phone can be a Bluetooth shutter remote for an iPhone.
+                              : _overlayButton(
+                                  label: 'iPhone remote',
+                                  icon: Icons.settings_remote_outlined,
+                                  onTap: _openRemote,
+                                ),
                     ),
                   ),
                   if (_caps != null)

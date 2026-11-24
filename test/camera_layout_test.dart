@@ -108,6 +108,36 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('Android: iPhone remote opens and the camera comes back', (tester) async {
+    final calls = <String>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('valometer/camera'),
+      (call) async {
+        calls.add(call.method);
+        return call.method == 'open' ? _caps : null;
+      },
+    );
+    tester.view.physicalSize = const Size(393, 873) * 3;
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(theme: buildTheme(), home: const CameraScreen()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('iPhone remote'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(AppBar), findsOneWidget);
+    expect(calls, contains('close'));
+
+    await tester.pageBack();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(calls.where((c) => c == 'open').length, 2);
+    expect(find.text('FORMAT'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+  });
+
   testWidgets('camera screen handles larger system text', (tester) async {
     tester.view.physicalSize = const Size(360, 740) * 3;
     tester.view.devicePixelRatio = 3;
