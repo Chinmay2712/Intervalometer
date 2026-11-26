@@ -21,6 +21,7 @@ import android.media.ImageReader
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.Looper
 import android.util.Size
 import io.flutter.view.TextureRegistry
 import java.io.File
@@ -156,7 +157,8 @@ class CameraController(
             rawReader?.close()
             session = null
             device = null
-            producer.release()
+            // Flutter only allows releasing the preview texture on the main thread.
+            Handler(Looper.getMainLooper()).post { producer.release() }
             saver.shutdown()
             thread.quitSafely()
         }
